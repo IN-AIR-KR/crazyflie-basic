@@ -1,0 +1,6 @@
+[submodule "crazyswarm2"]
+	path = crazyswarm2
+	url = https://github.com/IMRCLab/crazyswarm2.git
+[submodule "motion_capture_tracking"]
+	path = motion_capture_tracking
+	url = https://github.com/IMRCLab/motion_capture_tracking.git

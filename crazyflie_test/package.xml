@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>crazyflie_test</name>
+  <version>0.0.1</version>
+  <description>Crazyswarm2 기반 Crazyflie 비행 테스트 패키지</description>
+  <maintainer email="todo@todo.com">todo</maintainer>
+  <license>MIT</license>
+
+  <!-- crazyswarm2 서버/파이썬 API. launch.py 가 crazyflie 패키지의 launch 를 포함한다. -->
+  <depend>crazyflie</depend>
+  <depend>crazyflie_py</depend>
+  <depend>python3-numpy</depend>
+  <depend>python3-scipy</depend>   <!-- traj.shapes.star 의 주기 스플라인 -->
+  <exec_depend>rviz2</exec_depend> <!-- 시각화(선택) -->
+
+  <test_depend>ament_copyright</test_depend>
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>ament_pep257</test_depend>
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

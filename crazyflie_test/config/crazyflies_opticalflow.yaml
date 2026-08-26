@@ -1,0 +1,37 @@
+# Flow deck 온보드 추정 모드용 로봇 설정 (mocap 노드 미사용).
+# crazyswarm2 crazyflies.yaml 포맷(fileversion 3)을 따른다.
+# ⚠️ URI / initial_position 은 실제 값으로 교체할 것.
+fileversion: 3
+
+robots:
+  cf231:
+    enabled: true
+    uri: radio://0/80/2M/E7E7E7E7E7      # TODO: 실제 URI로 교체
+    initial_position: [0.0, 0.0, 0.0]
+    type: cf21_flow
+
+robot_types:
+  cf21_flow:
+    motion_capture:
+      enabled: false                      # mocap 미사용
+      tracking: "vendor"
+    big_quad: false
+    battery:
+      voltage_warning: 3.8
+      voltage_critical: 3.7
+
+all:
+  reference_frame: "world"
+  firmware_params:
+    commander:
+      enHighLevel: 1
+    stabilizer:
+      estimator: 2      # Kalman
+      controller: 1     # 1 = PID — Flow deck 사용 시 Mellinger보다 안정적
+  firmware_logging:
+    enabled: true
+    default_topics:
+      pose:
+        frequency: 50
+      status:
+        frequency: 1    # Hz — 배터리/통신 상태 (voltage_warning 감시에 필요)
