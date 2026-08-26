@@ -75,7 +75,9 @@ rviz2
 rviz2 에서 **Global Options → Fixed Frame → `world`** 로 바꾸고 **Add → TF** 를 추가하면
 기체가 움직이는 게 보인다.
 
-## 서버 실행 (`launch.py`)
+## 예제
+
+### 서버 실행
 
 모든 예제는 먼저 서버를 띄워야 한다. 서버가 어떤 기체 설정을 쓸지는 `mode`,
 실기체/시뮬 중 무엇에 연결할지는 `backend` 가 정한다.
@@ -96,8 +98,6 @@ ros2 launch crazyflie_test launch.py mode:=opticalflow backend:=sim   # 하드�
 파일의 `uri` 와 `initial_position` 을 실제 값으로 반드시 바꿀 것** (기본값은 예시다).
 `mode:=mocap` 일 때만 `config/motion_capture.yaml` 의 QTM 노드가 함께 뜨므로, 그 파일의
 `hostname` 도 QTM 이 도는 PC 의 IP 로 바꿔야 한다.
-
-## 예제
 
 서버를 켠 상태에서 다른 터미널에서 실행한다.
 
@@ -127,15 +127,15 @@ ros2 run crazyflie_test clover  --laps 3 --speed 2.0
 ros2 run crazyflie_test star    --laps 3 --speed 1.2
 ```
 
-| 옵션            | 기본      | 설명                                                |
-| --------------- | --------- | --------------------------------------------------- |
-| `--laps`        | 3         | 바퀴 수                                             |
-| `--speed`       | 1.0       | 목표 최대 속도 [m/s]. **클수록 빠름**               |
-| `--yaw`         | `forward` | `forward`=진행 방향으로 기수 정렬, `constant`=고정  |
-| `--height`      | 1.0       | 비행 고도 [m]                                       |
-| `--scale`       | 1.0       | 도형 수평 크기 배율                                 |
-| `--rate`        | 50        | setpoint 스트리밍 주파수 [Hz]                       |
-| `--ramp`        | 2.0       | 시작/종료 가감속 시간 [s]                           |
+| 옵션       | 기본      | 설명                                               |
+| ---------- | --------- | -------------------------------------------------- |
+| `--laps`   | 3         | 바퀴 수                                            |
+| `--speed`  | 1.0       | 목표 최대 속도 [m/s]. **클수록 빠름**              |
+| `--yaw`    | `forward` | `forward`=진행 방향으로 기수 정렬, `constant`=고정 |
+| `--height` | 1.0       | 비행 고도 [m]                                      |
+| `--scale`  | 1.0       | 도형 수평 크기 배율                                |
+| `--rate`   | 50        | setpoint 스트리밍 주파수 [Hz]                      |
+| `--ramp`   | 2.0       | 시작/종료 가감속 시간 [s]                          |
 
 실행하면 이륙 전에 궤적 시간, 실현 최대 속도/가속도, 형상 bbox 를 출력한다.
 **비행 공간에 들어가는 크기인지 이 출력으로 먼저 확인할 것.**
