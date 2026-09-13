@@ -13,6 +13,10 @@
   <depend>python3-numpy</depend>
   <depend>python3-scipy</depend>   <!-- traj.shapes.star 의 주기 스플라인 -->
   <exec_depend>rviz2</exec_depend> <!-- 시각화(선택) -->
+  <exec_depend>ros_gz_bridge</exec_depend>
+  <exec_depend>ros_gz_interfaces</exec_depend>
+  <exec_depend>ros_gz_sim</exec_depend>
+  <exec_depend>tf2_ros_py</exec_depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>

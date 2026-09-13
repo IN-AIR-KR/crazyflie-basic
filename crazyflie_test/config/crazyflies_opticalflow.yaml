@@ -6,7 +6,7 @@ fileversion: 3
 robots:
   cf231:
     enabled: true
-    uri: radio://0/80/2M/E7E7E7E7E7      # TODO: 실제 URI로 교체
+    uri: radio://0/80/2M/E7E7E7E7E5     # TODO: 실제 URI로 교체
     initial_position: [0.0, 0.0, 0.0]
     type: cf21_flow
 

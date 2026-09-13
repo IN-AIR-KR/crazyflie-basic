@@ -13,7 +13,7 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
-        (os.path.join('share', package_name, 'launch'), glob('launch/*')),
+        (os.path.join('share', package_name, 'launch'), glob('launch/*.py')),
         (os.path.join('share', package_name, 'config'), glob('config/*')),
     ],
     install_requires=['setuptools'],
@@ -33,6 +33,7 @@ setup(
             'figure8 = crazyflie_test.traj.entry:figure8',
             'clover = crazyflie_test.traj.entry:clover',
             'star = crazyflie_test.traj.entry:star',
+            'gazebo_pose_bridge = crazyflie_test.gazebo_pose_bridge:main',
         ],
     },
 )
