@@ -27,6 +27,7 @@ setup(
             'hello_world = crazyflie_test.hello_world:main',
             'goto_square = crazyflie_test.goto_square:main',
             'multi_hello_world = crazyflie_test.multi_hello_world:main',
+            'single_cf = crazyflie_test.single_cf:main',
             # 주기 궤적 — 도형별 연속-랩 비행
             'circle = crazyflie_test.traj.entry:circle',
             'oval = crazyflie_test.traj.entry:oval',
