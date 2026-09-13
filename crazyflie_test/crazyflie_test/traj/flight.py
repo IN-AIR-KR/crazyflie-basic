@@ -16,10 +16,10 @@
 import argparse
 import math
 
-from crazyflie_py import Crazyswarm
 import numpy as np
 
 from . import shapes as sh
+from ..drone_stack import DroneStack
 
 DEFAULT_LAPS = 3
 DEFAULT_SPEED = 1.0     # m/s  목표 최대 속도
@@ -154,37 +154,21 @@ def run(shape_name, **shape_kwargs):
     print(f'  형상 bbox x[{lo[0]:+.2f},{hi[0]:+.2f}] y[{lo[1]:+.2f},{hi[1]:+.2f}] '
           f'z[{lo[2]:.2f},{hi[2]:.2f}] (이륙 지점 기준 xy 오프셋)')
 
-    swarm = Crazyswarm()
-    th = swarm.timeHelper
-    cf = swarm.allcfs.crazyflies[0]
+    drone = DroneStack()
 
-    init = np.array(cf.initialPosition)
+    init = drone.initial_position(0)
     off = np.array([init[0], init[1], 0.0])       # 도형 xy 를 이륙 지점에 얹는다
     p0 = traj.eval(0.0)[0] + off                  # 궤적 시작 world 좌표 (z 는 도형 고도)
 
-    cf.takeoff(targetHeight=float(p0[2]), duration=3.0)
-    th.sleep(3.5)
-    cf.goTo(p0, yaw=traj.eval(0.0)[3], duration=3.0)
-    th.sleep(3.5)
+    drone.takeoff(height=float(p0[2]), duration=3.0, which=0)
+    drone.goto(p0, which=0, yaw=traj.eval(0.0)[3], duration=3.0)
 
-    start = th.time()
-    while not th.isShutdown():
-        t = th.time() - start
-        if t > traj.duration:
-            break
+    # 도형 좌표를 이륙 지점 기준으로 옮겨서 스트리밍한다. 스트리밍 종료 처리
+    # (마지막 setpoint 유지 → notifySetpointsStop)는 스택이 맡는다.
+    def sample(t):
         pos, vel, acc, yaw, yawrate = traj.eval(t)
-        cf.cmdFullState(pos + off, vel, acc, yaw, np.array([0.0, 0.0, yawrate]))
-        th.sleepForRate(args.rate)
+        return pos + off, vel, acc, yaw, yawrate
 
-    # 궤적은 s=laps(정수)=시작점에서 속도 0 으로 끝난다. 마지막 setpoint 를 잠깐
-    # 더 물려 흔들림을 재운 뒤 착륙.
-    # ⚠️ cmdFullState(low-level) 뒤에는 goTo 가 통하지 않는다(sim/펌웨어 공통). land 는
-    #    현재 위치에서 바로 되므로 goTo 없이 notifySetpointsStop → land 로 마친다.
-    end_pos, _, _, end_yaw, _ = traj.eval(traj.duration)
-    for _ in range(int(0.5 * args.rate)):
-        cf.cmdFullState(end_pos + off, np.zeros(3), np.zeros(3), end_yaw, np.zeros(3))
-        th.sleepForRate(args.rate)
-    cf.notifySetpointsStop()
-    th.sleep(0.3)
-    cf.land(targetHeight=0.04, duration=3.0)
-    th.sleep(3.5)
+    drone.stream_full_state(sample, traj.duration, which=0, rate=args.rate)
+
+    drone.land(which=0, duration=3.0)

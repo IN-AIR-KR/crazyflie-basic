@@ -23,6 +23,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            # 시나리오 — drone_stack 의 함수들을 순서대로 호출한다
+            'drone_main = crazyflie_test.drone_main:main',
             # 기본 예제
             'hello_world = crazyflie_test.hello_world:main',
             'goto_square = crazyflie_test.goto_square:main',

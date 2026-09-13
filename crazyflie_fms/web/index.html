@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Crazyflie FMS</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>Crazyflie <span>FMS</span></h1>
+    <div id="conn" class="pill off">rosbridge 연결 안 됨</div>
+  </header>
+
+  <main>
+    <section class="map-panel">
+      <div class="map-head">
+        <span id="hint">기체를 고르고 맵을 클릭해 목표를 찍으세요</span>
+        <span id="coords" class="coords">—</span>
+      </div>
+      <canvas id="map"></canvas>
+    </section>
+
+    <aside class="side">
+      <div class="mission">
+        <div class="mission-head">
+          <span class="label">임무</span>
+          <span id="mission-state" class="state">idle</span>
+        </div>
+        <div class="bar"><div id="mission-bar" class="fill"></div></div>
+        <div class="btns">
+          <button id="btn-start" class="primary">START</button>
+          <button id="btn-land">착륙</button>
+          <button id="btn-clear">목표 해제</button>
+          <button id="btn-estop" class="danger">비상 정지</button>
+        </div>
+      </div>
+      <div id="robots" class="robots"></div>
+    </aside>
+  </main>
+
+  <script src="roslib.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
