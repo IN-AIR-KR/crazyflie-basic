@@ -6,8 +6,11 @@
 """
 from crazyflie_test.drone_stack import DroneStack
 
+
 TAKEOFF_HEIGHT = 1.0
-HOVER_TIME = 5.0
+TAKEOFF_DURATION = 2.5
+HOVER_TIME = 2.0
+LAND_DURATION = 2.5
 
 
 def main():
