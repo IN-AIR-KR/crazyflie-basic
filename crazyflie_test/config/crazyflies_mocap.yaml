@@ -6,7 +6,7 @@ fileversion: 3
 robots:
   cf231:
     enabled: true
-    uri: radio://0/80/2M/E7E7E7E7E7 # 현재값 유지 (Crazyflie 기본 주소)
+    uri: radio://0/80/2M/E7E7E7E7E6 # 현재값 유지 (Crazyflie 기본 주소)
     initial_position: [0.0, 0.0, 0.0] # mocap 좌표계 기준 이륙 위치
     type: cf21_active # Active Marker Deck + Qualisys
 

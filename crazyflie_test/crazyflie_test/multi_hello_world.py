@@ -13,7 +13,7 @@
 from crazyflie_test.drone_stack import DroneStack
 
 TAKEOFF_HEIGHT = 1.0
-HOVER_TIME = 5.0
+HOVER_TIME = 2.0
 
 
 def main():

@@ -114,6 +114,97 @@ Flow deck 은 기체마다 자기 이륙 지점 기준으로 상대 추정을 �
 없다. 그래서 군집은 브로드캐스트 명령(`allcfs`)만 쓰고, 기체들을 바닥에서 서로
 충분히 떨어뜨려 놓아야 한다(설정의 `initial_position` 과 같은 간격으로).
 
+### Flow deck 실기체 3대 동시 비행
+
+`config/crazyflies_opticalflow_multi.yaml`에 등록된 `cf1`, `cf2`, `cf3`를 동시에
+이륙시켜 5초 동안 호버한 뒤 착륙하는 절차다. `multi_hello_world`는 세 기체에
+브로드캐스트 명령을 보내므로 이륙과 착륙 시점이 함께 맞춰진다.
+
+#### 비행 전 확인
+
+- 세 기체 모두 Flow deck을 장착하고 배터리를 충분히 충전한다.
+- Crazyradio를 연결한다.
+- YAML의 `cf1`, `cf2`, `cf3` URI가 실제 기체 주소와 일치하는지 확인한다.
+- 기체를 무늬가 있고 평평한 바닥에 서로 충분히 떨어뜨려 놓는다. 현재 설정 기준
+  권장 간격은 약 1 m다.
+- 사람과 장애물을 비행 공간 밖으로 이동시키고 비상 정지 터미널을 준비한다.
+
+YAML의 URI가 실제 주소와 다르면 해당 기체에는 연결할 수 없다. 또한 Flow deck은
+각 기체의 이륙 지점을 원점으로 사용하는 상대 위치 추정 방식이므로, 공통 절대
+좌표가 필요한 편대비행에는 사용할 수 없다.
+
+#### 빌드 및 환경 설정
+
+최초 한 번 또는 패키지 코드가 변경된 뒤에 빌드한다.
+
+```bash
+cd /home/hajaemin/crazyflie/cf_ws
+source /opt/ros/$ROS_DISTRO/setup.bash
+colcon build --symlink-install --packages-select crazyflie_test
+source install/setup.bash
+```
+
+이후 새 터미널을 열 때마다 다음 환경 설정이 필요하다.
+
+```bash
+cd /home/hajaemin/crazyflie/cf_ws
+source /opt/ros/$ROS_DISTRO/setup.bash
+source install/setup.bash
+```
+
+#### 터미널 1: Crazyflie 서버 실행
+
+```bash
+ros2 launch crazyflie_test launch.py \
+  mode:=opticalflow_multi \
+  backend:=cpp
+```
+
+서버 로그에서 `cf1`, `cf2`, `cf3`가 모두 연결되었는지 확인한다. 한 대라도 연결되지
+않았다면 비행 명령을 실행하지 않는다.
+
+#### 터미널 2: 세 기체 동시 이륙
+
+터미널 1의 서버를 실행한 상태에서 다음 명령을 실행한다.
+
+```bash
+ros2 run crazyflie_test multi_hello_world
+```
+
+정상적으로 세 기체가 로드되면 다음 메시지가 출력된다.
+
+```text
+[multi_hello_world] 3 기체 동시 비행
+```
+
+프로그램은 세 기체를 2.5초 동안 고도 1.0 m까지 올리고, 5초 동안 호버한 다음
+2.5초 동안 고도 0.04 m까지 내려 착륙시킨다.
+
+#### 터미널 3: 전체 비상 정지
+
+비행 전에 아래 명령을 별도 터미널에 입력해 두고, 비상시 Enter를 누를 수 있게
+준비한다.
+
+```bash
+ros2 service call /all/emergency std_srvs/srv/Empty "{}"
+```
+
+특정 기체만 정지하려면 기체별 서비스를 호출한다.
+
+```bash
+ros2 service call /cf1/emergency std_srvs/srv/Empty "{}"
+ros2 service call /cf2/emergency std_srvs/srv/Empty "{}"
+ros2 service call /cf3/emergency std_srvs/srv/Empty "{}"
+```
+
+> **주의:** `emergency`는 착륙 명령이 아니라 모터 전원을 즉시 차단하는 명령이다.
+> 공중에서 호출하면 기체가 그대로 추락한다. 비상 정지 후에는 후속 비행 명령이
+> 무시될 수 있으므로 기체를 재부팅한다.
+
+`multi_hello_world.py` 자체에는 키보드 비상 정지 버튼이나 `Ctrl+C` 예외 시 자동
+착륙 처리가 없다. 실행 도중 `Ctrl+C`를 누르면 정상 착륙 코드가 실행되지 않을 수
+있으므로, `Ctrl+C`를 비상 정지 수단으로 사용하지 않는다.
+
 ### 주기 궤적
 
 닫힌 도형을 지정한 바퀴 수만큼 **멈추지 않고 연속으로** 돈다. 도형은 고정하고 속도만

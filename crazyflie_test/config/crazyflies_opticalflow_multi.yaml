@@ -10,19 +10,19 @@ fileversion: 3
 robots:
   cf1:
     enabled: true
-    uri: radio://0/80/2M/E7E7E7E7E1 # TODO: 실제 URI로 교체
+    uri: radio://0/80/2M/E7E7E7E7E5 # TODO: 실제 URI로 교체
     initial_position: [0.0, 1.0, 0.0]
     type: cf21_flow
   cf2:
     enabled: true
-    uri: radio://0/80/2M/E7E7E7E7E2 # TODO: 실제 URI로 교체
+    uri: radio://0/80/2M/E7E7E7E7E7 # TODO: 실제 URI로 교체
     initial_position: [0.0, 0.0, 0.0] # cf1 과 1m 간격 (물리 배치도 동일하게)
     type: cf21_flow
-  cf3:
-    enabled: true
-    uri: radio://0/80/2M/E7E7E7E7E3 # TODO: 실제 URI로 교체
-    initial_position: [0.0, -1.0, 0.0]
-    type: cf21_flow
+#  cf3:
+#    enabled: true
+#    uri: radio://0/80/2M/E7E7E7E7E7 # TODO: 실제 URI로 교체
+#    initial_position: [0.0, -1.0, 0.0]
+#    type: cf21_flow
 
 robot_types:
   cf21_flow:
