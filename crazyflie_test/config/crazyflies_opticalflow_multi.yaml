@@ -5,23 +5,30 @@
 #    => 멀티 비행은 브로드캐스트 상대 이동(allcfs.goTo, 항상 relative)으로만 안전하게 편대 유지 가능.
 #    => 기체들은 바닥에서 서로 충분히 떨어뜨려 배치할 것 (같은 상대 이동을 동시에 수행하므로 간격 유지됨).
 # ⚠️ URI / 기체 이름 / initial_position 은 실제 값으로 교체할 것.
+# 월요일 실제 비행은 보유 중인 2대(cf1,cf2)로 시작 — cf3,cf4는 기체 늘어나면 enabled: true로 켤 것
+# (1m 간격 한 줄로 이어짐. formation_flight.py 의 line 대열과 동일 순서).
 fileversion: 3
 
 robots:
   cf1:
     enabled: true
     uri: radio://0/80/2M/E7E7E7E7E1 # TODO: 실제 URI로 교체
-    initial_position: [0.0, 1.0, 0.0]
+    initial_position: [0.0, -0.5, 0.0]
     type: cf21_flow
   cf2:
     enabled: true
     uri: radio://0/80/2M/E7E7E7E7E2 # TODO: 실제 URI로 교체
-    initial_position: [0.0, 0.0, 0.0] # cf1 과 1m 간격 (물리 배치도 동일하게)
+    initial_position: [0.0, 0.5, 0.0]
     type: cf21_flow
   cf3:
-    enabled: true
+    enabled: false # 3번째 기체 확보하면 true로
     uri: radio://0/80/2M/E7E7E7E7E3 # TODO: 실제 URI로 교체
-    initial_position: [0.0, -1.0, 0.0]
+    initial_position: [0.0, 1.5, 0.0]
+    type: cf21_flow
+  cf4:
+    enabled: false # 4번째 기체 확보하면 true로
+    uri: radio://0/80/2M/E7E7E7E7E4 # TODO: 실제 URI로 교체
+    initial_position: [0.0, 2.5, 0.0]
     type: cf21_flow
 
 robot_types:

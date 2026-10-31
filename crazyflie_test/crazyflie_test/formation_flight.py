@@ -23,6 +23,7 @@
     ros2 run crazyflie_test formation_flight
     ros2 run crazyflie_test formation_flight --shape v --spacing 0.6
     ros2 run crazyflie_test formation_flight --shape line,v,circle   # 구간마다 대열 변경(absolute 전용)
+    ros2 run crazyflie_test formation_flight --shape line --path line --side 2.0  # 한 줄로 직진 후 복귀
     ros2 run crazyflie_test formation_flight --mode broadcast        # 실기체 강제(대열 변경 없음)
 
 ⚠️ 월요일 실제 비행(동글 + cflib/cpp, mocap 없음): --mode broadcast 를 쓸 것.
@@ -92,6 +93,19 @@ def _square_deltas(side):
             np.array([-side, 0.0, 0.0]), np.array([0.0, -side, 0.0])]
 
 
+def _line_path(distance, height):
+    """편대 중심이 따라갈 경로 — 직진 후 출발점으로 복귀(왕복 1회)."""
+    return [np.array([distance, 0.0, height]), np.array([0.0, 0.0, height])]
+
+
+def _line_deltas(distance):
+    """broadcast 모드용 — 직진 후 복귀를 두 번의 상대 이동으로."""
+    return [np.array([distance, 0.0, 0.0]), np.array([-distance, 0.0, 0.0])]
+
+
+PATHS = {'square': (_square_path, _square_deltas), 'line': (_line_path, _line_deltas)}
+
+
 # ── (A) absolute: 중심 경로 + 대열 오프셋, 구간마다 대열 모양 변경 가능 ──
 def run_absolute(swarm, path, shape_names, spacing, leg_duration, settle, height):
     th = swarm.timeHelper
@@ -153,8 +167,11 @@ def parse_args():
     p.add_argument('--shape', default='line',
                     help="absolute 모드 대열(쉼표로 나열, 경로 구간마다 순환): "
                          f"{','.join(SHAPES)} (예: line,v,circle)")
+    p.add_argument('--path', choices=list(PATHS), default='square',
+                    help='편대 중심 경로: square(사각형 한 바퀴) 또는 line(직진 후 복귀)')
     p.add_argument('--spacing', type=float, default=DEFAULT_SPACING, help='대열 내 기체 간 간격 [m]')
-    p.add_argument('--side', type=float, default=DEFAULT_SIDE, help='경로(사각형) 한 변 [m]')
+    p.add_argument('--side', type=float, default=DEFAULT_SIDE,
+                    help='경로 크기 [m] (square: 한 변, line: 직진 거리)')
     p.add_argument('--height', type=float, default=DEFAULT_HEIGHT, help='비행 고도 [m]')
     p.add_argument('--leg-duration', type=float, default=DEFAULT_LEG_DURATION, help='구간당 이동 시간 [s]')
     p.add_argument('--settle', type=float, default=DEFAULT_SETTLE, help='구간 사이 정착 여유 [s]')
@@ -171,18 +188,19 @@ def main():
         mode = 'broadcast' if detect_real(swarm.allcfs) else 'absolute'
     print(f'[formation_flight] mode={mode}')
 
+    path_fn, deltas_fn = PATHS[args.path]
     if mode == 'absolute':
         shapes = args.shape.split(',')
         unknown = [s for s in shapes if s not in SHAPES]
         if unknown:
             raise SystemExit(f'알 수 없는 대열: {unknown} (가능: {", ".join(SHAPES)})')
-        path = _square_path(args.side, args.height)
+        path = path_fn(args.side, args.height)
         run_absolute(swarm, path, shapes, args.spacing, args.leg_duration, args.settle, args.height)
     else:
         if args.shape != 'line':
             print('경고: broadcast 모드는 config 의 initial_position 대열을 그대로 쓴다. '
                   '--shape 은 무시됨.')
-        deltas = _square_deltas(args.side)
+        deltas = deltas_fn(args.side)
         run_broadcast(swarm, deltas, args.leg_duration, args.settle, args.height)
 
 
