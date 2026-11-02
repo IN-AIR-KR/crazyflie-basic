@@ -1,4 +1,4 @@
-"""여러 드론을 키보드 버튼으로 조종 — 이륙 / 전진(대열 유지) / 착륙.
+"""여러 드론을 키보드 버튼으로 조종 — 이륙 / 전후좌우 이동(대열 유지) / 착륙.
 
 편대 전체를 한 덩어리로 다룬다(allcfs 브로드캐스트 — 항상 상대 이동).
 대열 모양은 config 의 initial_position 그대로 유지되고 바꾸지 않는다.
@@ -20,10 +20,11 @@
     ros2 run crazyflie_test formation_teleop
 
 조작:
-    t   이륙 (전체 동시)
-    f   전진 한 걸음 (대열 유지한 채 앞으로 --step m, 여러 번 누르면 계속 전진)
-    l   착륙 (전체 동시)
-    x   비상정지 (전체 동시 — 모터 즉시 차단, 그대로 추락한다. 낮은 고도에서만 쓸 것)
+    t        이륙 (전체 동시)
+    w,s      앞,뒤 한 걸음 (대열 유지한 채 --step m, 연속으로 눌러도 됨)
+    a,d      왼쪽,오른쪽 한 걸음
+    l        착륙 (전체 동시)
+    x        비상정지 (전체 동시 — 모터 즉시 차단, 그대로 추락한다. 낮은 고도에서만 쓸 것)
     ESC / Ctrl+C  착륙 후 종료
 """
 import argparse
@@ -37,11 +38,17 @@ from .single_cf import KeyPoller, _say
 TAKEOFF_DURATION = 2.5
 LAND_DURATION = 2.5
 DEFAULT_HEIGHT = 1.0
-DEFAULT_STEP = 0.5            # m   'f' 한 번에 전진하는 거리
+DEFAULT_STEP = 0.5            # m   한 걸음 이동 거리
 DEFAULT_STEP_DURATION = 1.5   # s   한 걸음 이동 시간
 
+# 키 → world 좌표계 이동 방향(dx, dy). x=앞, y=왼쪽 (ENU).
+MOVE_KEYS = {
+    'w': (1.0, 0.0), 's': (-1.0, 0.0),
+    'a': (0.0, 1.0), 'd': (0.0, -1.0),
+}
+
 HELP = """
-  t 이륙   f 전진 한 걸음   l 착륙   x 비상정지   ? 도움말   ESC 착륙 후 종료
+  t 이륙   w,s 앞,뒤   a,d 왼쪽,오른쪽   l 착륙   x 비상정지   ? 도움말   ESC 착륙 후 종료
 """
 
 
@@ -79,12 +86,13 @@ def main():
         th.sleep(TAKEOFF_DURATION + 0.5)
         flying = True
 
-    def forward():
+    def move(dx, dy):
         if not flying:
             _say('아직 이륙 안 함 — t 먼저')
             return
-        _say(f'전진 {args.step:.2f} m')
-        allcfs.goTo([args.step, 0.0, 0.0], yaw=0.0, duration=args.step_duration)
+        delta = [dx * args.step, dy * args.step, 0.0]
+        _say(f'이동 ({delta[0]:+.2f}, {delta[1]:+.2f}) m')
+        allcfs.goTo(delta, yaw=0.0, duration=args.step_duration)
 
     def land():
         nonlocal flying
@@ -107,8 +115,8 @@ def main():
                 for key in poller.poll():
                     if key == 't':
                         takeoff()
-                    elif key == 'f':
-                        forward()
+                    elif key in MOVE_KEYS:
+                        move(*MOVE_KEYS[key])
                     elif key == 'l':
                         land()
                     elif key == 'x':
