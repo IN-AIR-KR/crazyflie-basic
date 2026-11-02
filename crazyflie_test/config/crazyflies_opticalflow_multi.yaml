@@ -12,12 +12,12 @@ fileversion: 3
 robots:
   cf1:
     enabled: true
-    uri: radio://0/80/2M/E7E7E7E7E1 # TODO: 실제 URI로 교체
+    uri: radio://0/80/2M/E7E7E7E7E5
     initial_position: [0.0, -0.5, 0.0]
     type: cf21_flow
   cf2:
     enabled: true
-    uri: radio://0/80/2M/E7E7E7E7E2 # TODO: 실제 URI로 교체
+    uri: radio://0/80/2M/E7E7E7E7E7
     initial_position: [0.0, 0.5, 0.0]
     type: cf21_flow
   cf3:
