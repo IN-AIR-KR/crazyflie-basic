@@ -73,7 +73,7 @@ def generate_launch_description():
     mode_arg = DeclareLaunchArgument(
         'mode',
         default_value='opticalflow',
-        description='opticalflow(기본), opticalflow_multi, mocap',
+        description='opticalflow(기본), opticalflow_multi, mocap, mocap_multi',
     )
     backend_arg = DeclareLaunchArgument(
         'backend',
@@ -97,9 +97,9 @@ def generate_launch_description():
         ["'", config_dir, "/crazyflies_' + '", mode, "' + '.yaml'"])
     motion_capture_yaml_file = os.path.join(config_dir, 'motion_capture.yaml')
 
-    # mocap 모드일 때만 motion_capture_tracking 노드를 켠다
+    # mode 가 mocap 으로 시작할 때만(mocap, mocap_multi, ...) motion_capture_tracking 노드를 켠다
     use_mocap = PythonExpression(
-        ["'True' if '", mode, "' == 'mocap' else 'False'"])
+        ["'True' if '", mode, "'.startswith('mocap') else 'False'"])
 
     crazyflie_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
