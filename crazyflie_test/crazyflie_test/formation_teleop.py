@@ -3,12 +3,18 @@
 편대 전체를 한 덩어리로 다룬다(allcfs 브로드캐스트 — 항상 상대 이동).
 대열 모양은 config 의 initial_position 그대로 유지되고 바꾸지 않는다.
 브로드캐스트 명령 자체는 sim 과 실기체(Flow deck, mocap 없음)에서 똑같이
-안전하게 동작한다. 실기체인지는 자동 감지해서 이륙 전 칼만 추정기만
-리셋한다(sim 은 리셋 불필요·파라미터 서비스도 없음).
+안전하게 동작한다.
 
-⚠️ "전진(+x)"은 나침반 방향이 아니라 각 기체가 전원 켜질 때(추정기 리셋 시점)
-   보고 있던 방향이 기준이다(world 좌표계, single_cf.py §3 참고). 여러 대를
-   같은 방향으로 전진시키려면 비행 전 모든 기체를 **같은 방향을 보게** 놓을 것.
+⚠️ "전진(+x)"은 나침반 방향이 아니라 각 기체가 전원 켜질 때(칼만 추정기가
+   초기화되는 시점) 보고 있던 방향이 기준이다(world 좌표계, single_cf.py §3
+   참고). 여러 대를 같은 방향으로 전진시키려면 비행 전 모든 기체를
+   **같은 방향을 보게** 놓을 것.
+
+⚠️ 이륙 전 칼만 추정기 리셋(single_cf.py 의 reset_estimator())은 여기서 안
+   한다 — backend:=cflib 서버는 kalman.resetEstimation 을 yaml 설정에 없는
+   파라미터라 ROS 쪽에 등록하지 않아서 setParam() 이 조용히(경고만 찍고)
+   실패한다(crazyflie/config/server.yaml 의 query_all_values_on_connect 를
+   true 로 바꿔야 가능하나, 전체 서버 공용 설정이라 손대지 않았다).
 
     ros2 launch crazyflie_test launch.py mode:=opticalflow_multi backend:=sim
     ros2 run crazyflie_test formation_teleop
@@ -33,7 +39,6 @@ LAND_DURATION = 2.5
 DEFAULT_HEIGHT = 1.0
 DEFAULT_STEP = 0.5            # m   'f' 한 번에 전진하는 거리
 DEFAULT_STEP_DURATION = 1.5   # s   한 걸음 이동 시간
-RESET_SETTLE = 2.0            # s   추정기 리셋 후 수렴 대기 (single_cf.py 와 동일)
 
 HELP = """
   t 이륙   f 전진 한 걸음   l 착륙   x 비상정지   ? 도움말   ESC 착륙 후 종료
@@ -46,8 +51,6 @@ def parse_args():
     p.add_argument('--step', type=float, default=DEFAULT_STEP, help='전진 한 걸음 거리 [m]')
     p.add_argument('--step-duration', type=float, default=DEFAULT_STEP_DURATION,
                    help='한 걸음 이동 시간 [s]')
-    p.add_argument('--no-reset', dest='reset', action='store_false',
-                   help='이륙 전 칼만 추정기 리셋을 생략한다 (실기체 기본은 리셋함)')
     args, _ = p.parse_known_args()
     return args
 
@@ -67,23 +70,10 @@ def main():
     print(f'[formation_teleop] {len(allcfs.crazyflies)} 대 / {"실기체" if real else "sim"}')
     print(HELP)
 
-    def reset_estimators():
-        """칼만 추정기를 전체 동시 리셋 — single_cf.py 의 reset_estimator() 와 같은 이유.
-        sim 에는 파라미터 서비스가 없으므로 실기체에서만 호출한다."""
-        for cf in allcfs.crazyflies:
-            cf.setParam('kalman.resetEstimation', 1)
-        th.sleep(0.1)
-        for cf in allcfs.crazyflies:
-            cf.setParam('kalman.resetEstimation', 0)
-        th.sleep(RESET_SETTLE)
-
     def takeoff():
         nonlocal flying
         if flying:
             return
-        if real and args.reset:
-            _say(f'추정기 리셋 — {RESET_SETTLE:.0f}초간 기체를 움직이지 말 것')
-            reset_estimators()
         _say(f'이륙 → {args.height:.2f} m')
         allcfs.takeoff(targetHeight=args.height, duration=TAKEOFF_DURATION)
         th.sleep(TAKEOFF_DURATION + 0.5)
