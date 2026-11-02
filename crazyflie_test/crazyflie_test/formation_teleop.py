@@ -12,6 +12,7 @@
     t   이륙 (전체 동시)
     f   전진 한 걸음 (대열 유지한 채 앞으로 --step m, 여러 번 누르면 계속 전진)
     l   착륙 (전체 동시)
+    x   비상정지 (전체 동시 — 모터 즉시 차단, 그대로 추락한다. 낮은 고도에서만 쓸 것)
     ESC / Ctrl+C  착륙 후 종료
 """
 import argparse
@@ -28,7 +29,7 @@ DEFAULT_STEP = 0.5            # m   'f' 한 번에 전진하는 거리
 DEFAULT_STEP_DURATION = 1.5   # s   한 걸음 이동 시간
 
 HELP = """
-  t 이륙   f 전진 한 걸음   l 착륙   ? 도움말   ESC 착륙 후 종료
+  t 이륙   f 전진 한 걸음   l 착륙   x 비상정지   ? 도움말   ESC 착륙 후 종료
 """
 
 
@@ -81,6 +82,12 @@ def main():
         th.sleep(LAND_DURATION + 0.5)
         flying = False
 
+    def emergency():
+        nonlocal flying
+        allcfs.emergency()
+        flying = False
+        _say('*** 비상정지 — 모터 차단 ***')
+
     try:
         with KeyPoller() as poller:
             while not th.isShutdown():
@@ -91,6 +98,8 @@ def main():
                         forward()
                     elif key == 'l':
                         land()
+                    elif key == 'x':
+                        emergency()
                     elif key == '?':
                         _say(HELP)
                     elif key in ('ESC', '\x03', '\x04'):
