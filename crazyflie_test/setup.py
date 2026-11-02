@@ -29,6 +29,7 @@ setup(
             'multi_hello_world = crazyflie_test.multi_hello_world:main',
             'single_cf = crazyflie_test.single_cf:main',
             'formation_flight = crazyflie_test.formation_flight:main',
+            'formation_teleop = crazyflie_test.formation_teleop:main',
             # 주기 궤적 — 도형별 연속-랩 비행
             'circle = crazyflie_test.traj.entry:circle',
             'oval = crazyflie_test.traj.entry:oval',
