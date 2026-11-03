@@ -32,8 +32,11 @@ all:
     enabled: true
     default_topics:
       pose:
-        frequency: 50
+        frequency: 10   # Hz — RViz 시각화용. avoid.py/formation_teleop 는 pose 를 안 써서 낮춰도 무방
       status:
         frequency: 1    # Hz — 배터리/통신 상태 (voltage_warning 감시에 필요)
       scan:
-        frequency: 20   # Hz — 멀티레인저 전후좌우 거리 (avoid.py 가 구독)
+        frequency: 10   # Hz — 멀티레인저 전후좌우 거리 (avoid.py 가 구독).
+        # ⚠️ pose(원래 50)+scan+status 합산 다운링크 트래픽이 라디오 1개로
+        #    감당하기 빠듯해서 "Too many packets lost" 끊김의 원인이 될 수
+        #    있다 — 낮춰서 여유를 둠. 그래도 끊기면 더 낮출 것.
