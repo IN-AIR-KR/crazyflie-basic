@@ -7,8 +7,8 @@ crazyflie_py 에는 멀티레인저를 감싸는 함수가 없다(get_pose()/get
 
     sensor = RangeSensor(cf)           # <prefix>/scan 구독 시작
     ...
-    vx, vy = sensor.avoid_velocity(safe_dist=0.3, max_speed=0.5)
-    # → 가까운 방향이 있으면 그 반대로 적당한 속도, 없으면 (0, 0)
+    direction = sensor.avoid_direction(safe_dist=0.2)
+    # → 가까운 방향이 있으면 그 반대쪽 단위벡터(vx,vy), 없으면 None
 """
 import math
 
@@ -18,23 +18,28 @@ SENSOR_DIRS = {'front': (1.0, 0.0), 'back': (-1.0, 0.0),
                'left': (0.0, 1.0), 'right': (0.0, -1.0)}
 
 
-def repulsion(ranges, safe_dist, max_speed):
+def avoid_direction(ranges, safe_dist):
     """ranges: {'front':d, 'back':d, 'left':d, 'right':d} (m, inf=장애물 없음).
 
-    반환: (vx, vy) world 좌표계 회피 속도. ROS 없이도 테스트 가능한 순수 함수
-    (avoid.py --selftest 가 이걸 직접 검증한다)."""
+    safe_dist 보다 가까운 방향이 있으면 그 반대쪽 단위벡터(vx,vy)를 돌려준다
+    (여러 방향에서 동시에 가까우면 합쳐서 정규화). 가까운 게 하나도 없거나,
+    정반대 방향에서 동시에 감지돼 방향이 상쇄되면 None(제자리 유지).
+    ROS 없이도 테스트 가능한 순수 함수(avoid.py --selftest 가 직접 검증한다)."""
     vx = vy = 0.0
+    triggered = False
     for name, dist in ranges.items():
         if dist is None or math.isinf(dist) or dist >= safe_dist:
             continue
-        mag = max_speed * (safe_dist - dist) / safe_dist
+        triggered = True
         ux, uy = SENSOR_DIRS[name]
-        vx -= ux * mag  # 센서가 보는 방향의 반대로 민다
-        vy -= uy * mag
-    speed = math.hypot(vx, vy)
-    if speed > max_speed:
-        vx, vy = vx * max_speed / speed, vy * max_speed / speed
-    return vx, vy
+        vx -= ux  # 센서가 보는 방향의 반대로
+        vy -= uy
+    if not triggered:
+        return None
+    mag = math.hypot(vx, vy)
+    if mag < 1e-9:
+        return None
+    return vx / mag, vy / mag
 
 
 class RangeSensor:
@@ -53,6 +58,7 @@ class RangeSensor:
             (self.ranges['back'], self.ranges['right'],
              self.ranges['front'], self.ranges['left']) = msg.ranges[:4]
 
-    def avoid_velocity(self, safe_dist, max_speed):
-        """지금 들어온 거리값 기준 회피 속도 (vx, vy) — world 좌표계."""
-        return repulsion(self.ranges, safe_dist, max_speed)
+    def avoid_direction(self, safe_dist):
+        """지금 들어온 거리값 기준 회피 방향 단위벡터 (vx, vy) — world 좌표계.
+        가까운 게 없으면 None."""
+        return avoid_direction(self.ranges, safe_dist)
