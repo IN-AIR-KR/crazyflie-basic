@@ -29,12 +29,17 @@ repulsion)로 빼놨다. 이 파일은 그걸로 takeoff→회피→land 흐름�
    비행 중 yaw 가 크게 틀어지면 센서 방향과 회피 속도 방향이 어긋난다 —
    이 버전은 yaw 를 고정(0)하고 돌지 않는 걸 전제로 한다.
 
+조작: 비행 중 키보드로 멈출 수 있다 (single_cf.py 의 KeyPoller 재사용).
+    x             비상정지 — 모터 즉시 차단, 그대로 추락한다. 낮은 고도에서만 쓸 것
+    ESC / Ctrl+C  정상 착륙 후 종료 (--duration 다 안 돼도 바로 착륙)
+
     ros2 launch crazyflie_test launch.py mode:=opticalflow backend:=cflib
     ros2 run crazyflie_test avoid
     ros2 run crazyflie_test avoid --duration 30 --safe-dist 0.3
     ros2 run crazyflie_test avoid --selftest    # 센서/비행 없이 반발력 계산만 검증
 """
 import argparse
+import sys
 
 import numpy as np
 
@@ -89,11 +94,15 @@ def main():
     if args.selftest:
         _selftest()
         return
+    if not sys.stdin.isatty():
+        print('키보드 입력을 받을 수 없다 — 터미널에서 직접 실행할 것.')
+        return
 
     # ROS/Crazyswarm 은 --selftest 가 아닐 때만 임포트 — 셀프테스트는 ROS 환경 없이도 돌아가게.
     from crazyflie_py import Crazyswarm
 
     from .multiranger import RangeSensor
+    from .single_cf import KeyPoller, _say
 
     swarm = Crazyswarm()
     th = swarm.timeHelper
@@ -102,6 +111,7 @@ def main():
 
     print(f'[avoid] safe_dist={args.safe_dist} max_speed={args.max_speed} '
           f'duration={args.duration}s')
+    print('  x = 비상정지   ESC/Ctrl+C = 착륙 후 종료')
 
     init = np.array(cf.initialPosition)
     off = np.array([init[0], init[1], 0.0])
@@ -111,19 +121,30 @@ def main():
     cf.takeoff(targetHeight=z, duration=TAKEOFF_DURATION)
     th.sleep(TAKEOFF_DURATION + 0.5)
 
+    emergency = False
     start = th.time()
-    while not th.isShutdown():
-        t = th.time() - start
-        if t > args.duration:
-            break
-        vx, vy = sensor.avoid_velocity(args.safe_dist, args.max_speed)
-        dt = 1.0 / RATE
-        pos[0] += vx * dt
-        pos[1] += vy * dt
-        vel = np.array([vx, vy, 0.0])
-        cf.cmdFullState(pos, vel, np.zeros(3), 0.0, np.zeros(3))
-        th.sleepForRate(RATE)
+    with KeyPoller() as poller:
+        while not th.isShutdown():
+            for key in poller.poll():
+                if key == 'x':
+                    cf.emergency()
+                    emergency = True
+                    _say('*** 비상정지 — 모터 차단 ***')
+                elif key in ('ESC', '\x03', '\x04'):
+                    _say('착륙 후 종료')
+                    start = -1e9  # 아래 duration 체크로 바로 빠지게
+            if emergency or th.time() - start > args.duration:
+                break
+            vx, vy = sensor.avoid_velocity(args.safe_dist, args.max_speed)
+            dt = 1.0 / RATE
+            pos[0] += vx * dt
+            pos[1] += vy * dt
+            vel = np.array([vx, vy, 0.0])
+            cf.cmdFullState(pos, vel, np.zeros(3), 0.0, np.zeros(3))
+            th.sleepForRate(RATE)
 
+    if emergency:
+        return  # 모터 이미 차단됨 — land 명령 보내지 않는다
     cf.notifySetpointsStop()
     th.sleep(0.3)
     cf.land(targetHeight=0.04, duration=LAND_DURATION)
