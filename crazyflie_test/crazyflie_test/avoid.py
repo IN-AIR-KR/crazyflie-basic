@@ -29,7 +29,7 @@ repulsion)로 빼놨다. 이 파일은 그걸로 takeoff→회피→land 흐름�
    비행 중 yaw 가 크게 틀어지면 센서 방향과 회피 속도 방향이 어긋난다 —
    이 버전은 yaw 를 고정(0)하고 돌지 않는 걸 전제로 한다.
 
-    ros2 launch crazyflie_test launch.py mode:=opticalflow backend:=cpp
+    ros2 launch crazyflie_test launch.py mode:=opticalflow backend:=cflib
     ros2 run crazyflie_test avoid
     ros2 run crazyflie_test avoid --duration 30 --safe-dist 0.3
     ros2 run crazyflie_test avoid --selftest    # 센서/비행 없이 반발력 계산만 검증
