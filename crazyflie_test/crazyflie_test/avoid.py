@@ -1,21 +1,22 @@
 """Multiranger(전후좌우 거리 센서)로 장애물을 반사적으로 피하는 제어.
 
+센서 읽기 + 회피 속도 계산은 multiranger.py 의 전용 함수(RangeSensor,
+repulsion)로 빼놨다. 이 파일은 그걸로 takeoff→회피→land 흐름만 짠다.
+
 ⚠️ sim 은 Multiranger 를 전혀 흉내 내지 않는다 — crazyflie_sim 백엔드는
    firmware_logging.default_topics 자체를 구현하지 않아서(pose/status 도
    안 뜨는 것과 같은 이유) /cf1/scan 이 아예 안 생긴다. 그래서 이 코드는
    **실기체에서만** 의미가 있다. "시뮬 검증" 단계는 센서 연결 없이 반발력
    계산 로직만 확인하는 --selftest 로 대신한다 (아래 실행법 참고).
 
-읽는 토픽: <prefix>/scan (sensor_msgs/LaserScan). ranges 순서는 서버가 고정
-   [back, right, front, left] (crazyflie_server_py/crazyflie_server.py 참고).
+읽는 토픽: <prefix>/scan (sensor_msgs/LaserScan, multiranger.py 참고).
    config 의 firmware_logging.default_topics 에 scan 이 있어야 뜬다
-   (crazyflies_opticalflow.yaml 에 추가해둠). crazyflie_py 는 scan 을 감싸주는
-   메서드가 없어서, cf.node 로 직접 rclpy 구독을 건다.
+   (crazyflies_opticalflow.yaml 에 추가해둠).
 
 알고리즘 — 반발력(potential field), 매 tick 마다:
-    각 방향 거리가 SAFE_DIST 보다 가까우면, 가까울수록(선형) 그 반대 방향으로
+    각 방향 거리가 --safe-dist 보다 가까우면, 가까울수록(선형) 그 반대 방향으로
     미는 속도를 world 좌표계로 합산한다(4방향 모두 가능, 동시에 여러 방향에서
-    가까우면 벡터 합). 속도 크기는 MAX_SPEED 로 clamp. 아무것도 안 가까우면
+    가까우면 벡터 합). 속도 크기는 --max-speed 로 clamp. 아무것도 안 가까우면
     속도 0 (제자리 호버 유지) — "장애물 생기면 밀어내고, 없으면 가만히"가
     1차 목표고, 목표 지점으로 이동하는 길찾기는 아직 없다.
 
@@ -30,64 +31,42 @@
 
     ros2 launch crazyflie_test launch.py mode:=opticalflow backend:=cpp
     ros2 run crazyflie_test avoid
-    ros2 run crazyflie_test avoid --duration 30 --safe-dist 0.6
+    ros2 run crazyflie_test avoid --duration 30 --safe-dist 0.3
     ros2 run crazyflie_test avoid --selftest    # 센서/비행 없이 반발력 계산만 검증
 """
 import argparse
-import math
-import sys
 
 import numpy as np
+
+from .multiranger import repulsion
 
 TAKEOFF_DURATION = 2.5
 LAND_DURATION = 2.5
 DEFAULT_HEIGHT = 1.0
-DEFAULT_SAFE_DIST = 0.5    # m   이보다 가까우면 밀어내기 시작
+DEFAULT_SAFE_DIST = 0.2    # m   이보다 가까우면 밀어내기 시작
 DEFAULT_MAX_SPEED = 0.5    # m/s 회피 속도 상한
 DEFAULT_DURATION = 20.0    # s   회피 비행 지속 시간
 RATE = 30.0                # Hz  cmdFullState 스트리밍 주파수
 
-# 센서 이름 → world 좌표계 단위 벡터(그 센서가 보는 방향). x=앞, y=왼쪽 (ENU).
-# yaw 고정을 전제로 하므로 body frame == world frame 으로 취급한다.
-SENSOR_DIRS = {'front': (1.0, 0.0), 'back': (-1.0, 0.0),
-               'left': (0.0, 1.0), 'right': (0.0, -1.0)}
-
-
-def repulsion(ranges, safe_dist=DEFAULT_SAFE_DIST, max_speed=DEFAULT_MAX_SPEED):
-    """ranges: {'front':d, 'back':d, 'left':d, 'right':d} (m, inf=장애물 없음).
-
-    반환: (vx, vy) world 좌표계 회피 속도. 순수 함수라 ROS 없이 테스트 가능."""
-    vx = vy = 0.0
-    for name, dist in ranges.items():
-        if dist is None or math.isinf(dist) or dist >= safe_dist:
-            continue
-        mag = max_speed * (safe_dist - dist) / safe_dist
-        ux, uy = SENSOR_DIRS[name]
-        vx -= ux * mag  # 센서가 보는 방향의 반대로 민다
-        vy -= uy * mag
-    speed = math.hypot(vx, vy)
-    if speed > max_speed:
-        vx, vy = vx * max_speed / speed, vy * max_speed / speed
-    return vx, vy
-
 
 def _selftest():
-    """ROS 연결 없이 repulsion() 의 기본 성질만 확인한다."""
+    """ROS 연결 없이 multiranger.repulsion() 의 기본 성질만 확인한다."""
+    import math
     clear = {'front': math.inf, 'back': math.inf, 'left': math.inf, 'right': math.inf}
-    assert repulsion(clear) == (0.0, 0.0), '장애물 없으면 속도 0 이어야 함'
+    assert repulsion(clear, 0.2, 0.5) == (0.0, 0.0), '장애물 없으면 속도 0 이어야 함'
 
-    vx, vy = repulsion({**clear, 'front': 0.1}, safe_dist=0.5, max_speed=0.5)
+    vx, vy = repulsion({**clear, 'front': 0.05}, safe_dist=0.2, max_speed=0.5)
     assert vx < 0 and abs(vy) < 1e-9, f'앞이 가까우면 뒤로(-x) 밀어야 함: {(vx, vy)}'
 
-    vx, vy = repulsion({**clear, 'left': 0.1}, safe_dist=0.5, max_speed=0.5)
+    vx, vy = repulsion({**clear, 'left': 0.05}, safe_dist=0.2, max_speed=0.5)
     assert vy < 0 and abs(vx) < 1e-9, f'왼쪽이 가까우면 오른쪽(-y)으로 밀어야 함: {(vx, vy)}'
 
-    far_vx, _ = repulsion({**clear, 'front': 0.45}, safe_dist=0.5, max_speed=0.5)
-    near_vx, _ = repulsion({**clear, 'front': 0.05}, safe_dist=0.5, max_speed=0.5)
+    far_vx, _ = repulsion({**clear, 'front': 0.18}, safe_dist=0.2, max_speed=0.5)
+    near_vx, _ = repulsion({**clear, 'front': 0.02}, safe_dist=0.2, max_speed=0.5)
     assert abs(near_vx) > abs(far_vx), '더 가까울수록 더 세게 밀어야 함'
 
     vx, vy = repulsion({'front': 0.0, 'back': math.inf, 'left': 0.0, 'right': math.inf},
-                        safe_dist=0.5, max_speed=0.3)
+                        safe_dist=0.2, max_speed=0.3)
     assert math.hypot(vx, vy) <= 0.3 + 1e-9, f'MAX_SPEED 를 넘으면 안 됨: {(vx, vy)}'
 
     print('avoid.py --selftest: 전부 통과')
@@ -113,20 +92,13 @@ def main():
 
     # ROS/Crazyswarm 은 --selftest 가 아닐 때만 임포트 — 셀프테스트는 ROS 환경 없이도 돌아가게.
     from crazyflie_py import Crazyswarm
-    from sensor_msgs.msg import LaserScan
+
+    from .multiranger import RangeSensor
 
     swarm = Crazyswarm()
     th = swarm.timeHelper
     cf = swarm.allcfs.crazyflies[0]
-
-    latest = {'front': math.inf, 'back': math.inf, 'left': math.inf, 'right': math.inf}
-
-    def on_scan(msg):
-        # 서버가 고정하는 순서: [back, right, front, left] (crazyflie_server_py 기준)
-        if len(msg.ranges) >= 4:
-            latest['back'], latest['right'], latest['front'], latest['left'] = msg.ranges[:4]
-
-    cf.node.create_subscription(LaserScan, cf.prefix + '/scan', on_scan, 10)
+    sensor = RangeSensor(cf)
 
     print(f'[avoid] safe_dist={args.safe_dist} max_speed={args.max_speed} '
           f'duration={args.duration}s')
@@ -144,7 +116,7 @@ def main():
         t = th.time() - start
         if t > args.duration:
             break
-        vx, vy = repulsion(dict(latest), args.safe_dist, args.max_speed)
+        vx, vy = sensor.avoid_velocity(args.safe_dist, args.max_speed)
         dt = 1.0 / RATE
         pos[0] += vx * dt
         pos[1] += vy * dt
